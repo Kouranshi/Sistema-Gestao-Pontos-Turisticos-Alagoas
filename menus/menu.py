@@ -36,6 +36,7 @@ def menu_logado(usuario):
         print("6. Sair")
 
         opcao = input("Escolha uma opção: ")
+        limpar_tela()
 
         if opcao == "1":
             mostrar_pontos_turisticos()

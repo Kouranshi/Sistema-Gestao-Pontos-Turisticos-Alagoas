@@ -1,6 +1,8 @@
 import db.connection
 import bcrypt
 import psycopg2
+import time
+from functions.limpar import limpar_tela
 
 def cadastro():
     conn = db.connection.get_connection()
@@ -14,7 +16,13 @@ def cadastro():
 
     email = input("Digite seu e-mail: ")
 
-    while "@" not in email or "." not in email:
+    while (
+        "@" not in email
+        or "." not in email
+        or email.startswith("@")
+        or email.endswith("@")
+        or email.count("@") != 1
+    ):
         print("E-mail inválido. Tente novamente.")
         email = input("Digite seu e-mail novamente: ")
 
@@ -64,13 +72,15 @@ def login(email, senha):
     senha_hash = resultado[2]
 
     if bcrypt.checkpw(senha.encode('utf-8'), senha_hash.encode('utf-8')):
-        print("\nLogin bem-sucedido!")
+        print("\nLogin bem-sucedido! Aguarde um instante...")
         
         usuario = {
             "id": id_usuario,
             "nome": nome_usuario,
             "email": email
         }
+        time.sleep(2)
+        limpar_tela()
         
         return True, usuario # ou também o indice q o id tá
     else:

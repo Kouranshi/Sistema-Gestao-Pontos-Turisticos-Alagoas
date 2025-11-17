@@ -1,9 +1,9 @@
 # db/funcoes.py
 import db.connection
+from functions.limpar import limpar_tela
+import time
 
-# ----------------------
 # Helpers / Validações
-# ----------------------
 def _format_table(rows, headers):
     if not rows:
         return "(sem resultados)"
@@ -37,9 +37,7 @@ def ponto_existe_por_nome(nome):
         cur.close()
         conn.close()
 
-# ----------------------
 # Listagem / Consultas
-# ----------------------
 def mostrar_pontos_turisticos():
     conn = db.connection.get_connection()
     cur = conn.cursor()
@@ -55,6 +53,10 @@ def mostrar_pontos_turisticos():
             print("\n" + _format_table(rows, headers))
         else:
             print("\nNenhum ponto turístico cadastrado.")
+            time.sleep(2)
+            print("Voltando ao Menu Logado...")
+            time.sleep(1.5)
+            limpar_tela()
     except Exception as e:
         print("Erro ao listar pontos:", e)
     finally:
@@ -82,6 +84,10 @@ def mostrar_avaliacoes_usuario(id_usuario):
             print("\nAvaliações do usuário:\n" + _format_table(rows, headers))
         else:
             print("\nEsse usuário não tem avaliações.")
+            time.sleep(2)
+            print("Voltando ao Menu Logado...")
+            time.sleep(1.5)
+            limpar_tela()
     except Exception as e:
         print("Erro ao buscar avaliações do usuário:", e)
     finally:
@@ -110,6 +116,10 @@ def mostrar_avaliacoes_ponto(nome_ponto):
             print(f"\nAvaliações do ponto '{nome_ponto}':\n" + _format_table(rows, headers))
         else:
             print(f"\nNenhuma avaliação encontrada para '{nome_ponto}'.")
+            time.sleep(2)
+            print("Voltando ao Menu Logado...")
+            time.sleep(1.5)
+            limpar_tela()
     except Exception as e:
         print("Erro ao buscar avaliações do ponto:", e)
     finally:
@@ -133,12 +143,22 @@ def cadastrar_ponto_turistico(
     url_imagem_principal=None
 ):
     # Validações básicas
-    if not nome or len(nome) < 3:
+    while not nome or len(nome) < 3:
         print("Nome do ponto muito curto.")
-        return
-    if not estado:
+        time.sleep(1.5)
+        nome = input("Digite o nome do ponto turístico novamente: ")
+    while not estado:
         print("Estado é obrigatório.")
-        return
+        time.sleep(1.5)
+        estado = input("Digite o nome do estado novamente: ")
+    while not cep:
+        print("CEP é obrigatório.")
+        time.sleep(1.5)
+        cep = input("Digite o CEP novamente: ")
+    while not cidade:
+        print("Cidade é obrigatório.")
+        time.sleep(1.5)
+        cidade = input("Digite o nome da cidade novamente: ")
 
     conn = db.connection.get_connection()
     cur = conn.cursor()
@@ -166,19 +186,29 @@ def avaliar_ponto_turistico(id_usuario, nome_ponto, nota, comentario=None):
     except ValueError:
         print("Nota inválida. Use um número inteiro (0-5).")
         return
-    if nota_int < 0 or nota_int > 5:
+    while nota_int < 0 or nota_int > 5:
         print("Nota fora do intervalo (0-5).")
+        time.sleep(1.5)
+        nota_int = int(input("Digite a nota novamente: "))
         return
 
     # valida usuario
     if not usuario_existe(id_usuario):
         print("Usuário não existe.")
+        time.sleep(1.5)
+        print("Voltando ao Menu Logado...")
+        time.sleep(2)
+        limpar_tela()
         return
 
     # busca ponto por nome
     id_ponto = ponto_existe_por_nome(nome_ponto)
     if not id_ponto:
         print("Ponto turístico não encontrado com esse nome.")
+        time.sleep(1.5)
+        print("Voltando ao Menu Logado...")
+        time.sleep(2)
+        limpar_tela()
         return
 
     conn = db.connection.get_connection()
