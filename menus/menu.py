@@ -46,11 +46,8 @@ def menu_logado(usuario):
             nome_ponto = input("Digite o nome do ponto turístico: ")
             mostrar_avaliacoes_ponto(nome_ponto)
         elif opcao == "4":
-            nome = input("Nome do ponto turístico: ")
-            descricao = input("Descrição: ")
-            horario = input("Horário de funcionamento: ")
-            custo = input("Custo de entrada (ou 0 se gratuito): ")
-            cadastrar_ponto_turistico(nome, descricao, horario, custo)
+            print("Os campos com '*' São obrigatórios. Aperte Enter caso queira pular os campos não-obrigatórios.\n")
+            cadastrar_ponto_turistico()
         elif opcao == "5":
             nome_ponto = input("Nome do ponto turístico a avaliar: ")
             nota = input("Nota (0 a 5): ")

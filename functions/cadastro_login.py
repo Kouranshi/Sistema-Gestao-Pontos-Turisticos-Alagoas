@@ -84,5 +84,5 @@ def login(email, senha):
         
         return True, usuario # ou também o indice q o id tá
     else:
-        print("Senha incorreta!")
+        print("\nSenha incorreta!")
         return False, None

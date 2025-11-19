@@ -1,7 +1,18 @@
 # db/funcoes.py
 import db.connection
 from functions.limpar import limpar_tela
+import unicodedata
 import time
+from decimal import Decimal, InvalidOperation
+
+def normalizar(texto):
+    if not texto:
+        return ""
+    texto = texto.lower().strip()
+    texto = unicodedata.normalize("NFD", texto)
+    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
+    return texto
+
 
 # Helpers / Validações
 def _format_table(rows, headers):
@@ -16,6 +27,7 @@ def _format_table(rows, headers):
         out += sep.join(str(c).ljust(w) for c, w in zip(r, widths)) + "\n"
     return out
 
+
 def usuario_existe(id_usuario):
     conn = db.connection.get_connection()
     cur = conn.cursor()
@@ -26,39 +38,45 @@ def usuario_existe(id_usuario):
         cur.close()
         conn.close()
 
-def ponto_existe_por_nome(nome):
+
+def ponto_existe_por_nome(nome_digitado):
+    nome_normalizado = normalizar(nome_digitado)
+
     conn = db.connection.get_connection()
     cur = conn.cursor()
+
     try:
-        cur.execute("SELECT id_ponto_turistico FROM ponto_turistico WHERE LOWER(nome) = LOWER(%s);", (nome,))
+        cur.execute("""
+            SELECT id_ponto_turistico
+            FROM ponto_turistico
+            WHERE nome = %s;
+        """, (nome_normalizado,))
+
         r = cur.fetchone()
         return r[0] if r else None
+
     finally:
         cur.close()
         conn.close()
 
-# Listagem / Consultas
 def mostrar_pontos_turisticos():
     conn = db.connection.get_connection()
     cur = conn.cursor()
+
     try:
         cur.execute("""
-            SELECT id_ponto_turistico, nome, cidade, estado, cep
+            SELECT id_ponto_turistico, nome_exibicao, cidade, estado, cep
             FROM ponto_turistico
-            ORDER BY nome;
+            ORDER BY nome_exibicao;
         """)
         rows = cur.fetchall()
+
         if rows:
             headers = ("ID", "Nome", "Cidade", "Estado", "CEP")
             print("\n" + _format_table(rows, headers))
         else:
             print("\nNenhum ponto turístico cadastrado.")
-            time.sleep(2)
-            print("Voltando ao Menu Logado...")
-            time.sleep(1.5)
-            limpar_tela()
-    except Exception as e:
-        print("Erro ao listar pontos:", e)
+
     finally:
         cur.close()
         conn.close()
@@ -85,140 +103,157 @@ def mostrar_avaliacoes_usuario(id_usuario):
         else:
             print("\nEsse usuário não tem avaliações.")
             time.sleep(2)
-            print("Voltando ao Menu Logado...")
-            time.sleep(1.5)
             limpar_tela()
-    except Exception as e:
-        print("Erro ao buscar avaliações do usuário:", e)
     finally:
         cur.close()
         conn.close()
 
 def mostrar_avaliacoes_ponto(nome_ponto):
+    nome_normalizado = normalizar(nome_ponto)
+
     conn = db.connection.get_connection()
     cur = conn.cursor()
+
     try:
         cur.execute("""
-            SELECT 
-                u.nome AS usuario,
-                a.nota,
-                a.comentario,
-                a.data_avaliacao
+            SELECT u.nome, a.nota, a.comentario, a.data_avaliacao
             FROM avaliacao a
-            JOIN usuario u ON a.id_usuario = u.id_usuario
-            JOIN ponto_turistico p ON a.id_ponto_turistico = p.id_ponto_turistico
-            WHERE LOWER(p.nome) = LOWER(%s)
+            JOIN usuario u ON u.id_usuario = a.id_usuario
+            JOIN ponto_turistico p ON p.id_ponto_turistico = a.id_ponto_turistico
+            WHERE p.nome = %s
             ORDER BY a.data_avaliacao DESC;
-        """, (nome_ponto,))
+        """, (nome_normalizado,))
         rows = cur.fetchall()
         if rows:
-            headers = ("Usuário", "Nota", "Comentário", "Data")
+            headers = ("Usuário", "Nota", "Comentario", "Data")
             print(f"\nAvaliações do ponto '{nome_ponto}':\n" + _format_table(rows, headers))
         else:
             print(f"\nNenhuma avaliação encontrada para '{nome_ponto}'.")
             time.sleep(2)
-            print("Voltando ao Menu Logado...")
-            time.sleep(1.5)
             limpar_tela()
-    except Exception as e:
-        print("Erro ao buscar avaliações do ponto:", e)
     finally:
         cur.close()
         conn.close()
 
-# ----------------------
-# Cadastrar / Inserir
-# ----------------------
-def cadastrar_ponto_turistico(
-    nome,
-    estado,
-    cep,
-    cidade,
-    descricao=None,
-    horario_funcionamento=None,
-    custo_entrada=None,
-    logradouro=None,
-    latitude=None,
-    longitude=None,
-    url_imagem_principal=None
-):
-    # Validações básicas
-    while not nome or len(nome) < 3:
-        print("Nome do ponto muito curto.")
-        time.sleep(1.5)
-        nome = input("Digite o nome do ponto turístico novamente: ")
+def cadastrar_ponto_turistico():
+    nome_exibicao = input("Nome do ponto turístico (*): ")
+    # validações obrigatórias
+    while not nome_exibicao or len(nome_exibicao) < 3:
+        print("Nome muito curto.")
+        nome_exibicao = input("Digite novamente: ")
+
+    descricao = input("Descrição: ")
+    horario_funcionamento = input("Horário de funcionamento: ")
+    custo_entrada = input("Custo de entrada (ou 0 se gratuito): ")
+    logradouro = input("Logradouro: ")
+
+    estado = input("Estado (*): ")
     while not estado:
         print("Estado é obrigatório.")
-        time.sleep(1.5)
-        estado = input("Digite o nome do estado novamente: ")
-    while not cep:
-        print("CEP é obrigatório.")
-        time.sleep(1.5)
-        cep = input("Digite o CEP novamente: ")
+        estado = input("Estado: ")
+
+    cidade = input("Cidade (*): ")
     while not cidade:
         print("Cidade é obrigatório.")
-        time.sleep(1.5)
-        cidade = input("Digite o nome da cidade novamente: ")
+        cidade = input("Cidade: ")
+
+    cep = input("CEP (Apenas números) (*): ")
+    while not cep:
+        print("CEP é obrigatório.")
+        cep = input("CEP: ")
+
+    def latitude_longitude_opcional(string):
+        while True:
+            valor = input(string).strip().replace(",", ".")
+
+            if valor == "":
+                return None
+            
+            try:
+                return Decimal(valor)
+            except InvalidOperation:
+                print("Valor inválido! Digite números como: -9.665432 ou deixe em branco.")
+    
+    latitude = latitude_longitude_opcional("Latitude: ")
+    longitude = latitude_longitude_opcional("Longitude: ")
+
+    # nome normalizado
+    nome_normalizado = normalizar(nome_exibicao)
 
     conn = db.connection.get_connection()
     cur = conn.cursor()
+
     try:
         cur.execute("""
             INSERT INTO ponto_turistico
-            (nome, descricao, horario_funcionamento, custo_entrada, logradouro, cidade, estado, cep, latitude, longitude, url_imagem_principal)
+            (nome, nome_exibicao, descricao, horario_funcionamento, custo_entrada,
+             logradouro, cidade, estado, cep, latitude, longitude)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id_ponto_turistico;
-        """, (nome, descricao, horario_funcionamento, custo_entrada, logradouro, cidade, estado, cep, latitude, longitude, url_imagem_principal))
-        inserted = cur.fetchone()[0]
+        """, (
+            nome_normalizado,
+            nome_exibicao,
+            descricao,
+            horario_funcionamento,
+            custo_entrada,
+            logradouro,
+            cidade,
+            estado,
+            cep,
+            latitude,
+            longitude
+        ))
+
+        novo_id = cur.fetchone()[0]
         conn.commit()
-        print(f"Ponto turístico '{nome}' cadastrado com ID {inserted}.")
+
+        print(f"Ponto turístico '{nome_exibicao}' cadastrado com ID {novo_id}.")
+        time.sleep(2)
+        limpar_tela()
+
     except Exception as e:
         conn.rollback()
-        print("Erro ao cadastrar ponto turístico:", e)
+        print("Erro ao cadastrar:", e)
     finally:
         cur.close()
         conn.close()
 
 def avaliar_ponto_turistico(id_usuario, nome_ponto, nota, comentario=None):
+
     # valida nota
     try:
         nota_int = int(nota)
     except ValueError:
         print("Nota inválida. Use um número inteiro (0-5).")
         return
-    while nota_int < 0 or nota_int > 5:
-        print("Nota fora do intervalo (0-5).")
-        time.sleep(1.5)
-        nota_int = int(input("Digite a nota novamente: "))
+
+    if nota_int < 0 or nota_int > 5:
+        print("Nota deve ser entre 0 e 5.")
         return
 
-    # valida usuario
+    # valida usuário
     if not usuario_existe(id_usuario):
         print("Usuário não existe.")
-        time.sleep(1.5)
-        print("Voltando ao Menu Logado...")
-        time.sleep(2)
         limpar_tela()
         return
 
-    # busca ponto por nome
+    # busca ponto
     id_ponto = ponto_existe_por_nome(nome_ponto)
     if not id_ponto:
-        print("Ponto turístico não encontrado com esse nome.")
-        time.sleep(1.5)
-        print("Voltando ao Menu Logado...")
-        time.sleep(2)
+        print("Ponto não encontrado.")
         limpar_tela()
         return
 
     conn = db.connection.get_connection()
     cur = conn.cursor()
+
     try:
         cur.execute("""
             INSERT INTO avaliacao (id_usuario, id_ponto_turistico, nota, comentario)
             VALUES (%s, %s, %s, %s)
             RETURNING id_avaliacao;
         """, (id_usuario, id_ponto, nota_int, comentario))
+
         inserted = cur.fetchone()[0]
         conn.commit()
         print(f"Avaliação registrada com ID {inserted}.")

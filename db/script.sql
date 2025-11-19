@@ -17,8 +17,7 @@ estado varchar(45) not null,
 cidade varchar(45) not null,
 cep varchar(10) not null,
 latitude decimal(9,6),
-longitude decimal(9,6),
-url_imagem_principal varchar(255)
+longitude decimal(9,6)
 );
 
 create table categoria (
