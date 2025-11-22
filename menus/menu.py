@@ -6,7 +6,10 @@ from db.funcoes import (
     mostrar_avaliacoes_usuario,
     mostrar_avaliacoes_ponto,
     cadastrar_ponto_turistico,
-    avaliar_ponto_turistico
+    avaliar_ponto_turistico,
+    atualizar_nome_usuario,
+    excluir_avaliacao,
+    excluir_conta
 )
 
 def menu_cadastro():
@@ -33,7 +36,10 @@ def menu_logado(usuario):
         print("3. Ver avaliações de um ponto turístico")
         print("4. Cadastrar ponto turístico")
         print("5. Fazer avaliação")
-        print("6. Sair")
+        print("6. Alterar meu nome")
+        print("7. Excluir uma avaliação minha")
+        print("8. Excluir minha conta")
+        print("9. Sair")
 
         opcao = input("Escolha uma opção: ")
         limpar_tela()
@@ -54,10 +60,31 @@ def menu_logado(usuario):
             comentario = input("Comentário: ")
             avaliar_ponto_turistico(usuario["id"], nome_ponto, nota, comentario)
         elif opcao == "6":
+            novo_nome = input("Digite seu novo nome: ")
+            atualizar_nome_usuario(usuario["id"], novo_nome)
+        elif opcao == "7":
+            id_avaliacao = input("Digite o ID da avaliação que deseja excluir: ")
+            excluir_avaliacao(usuario["id"], id_avaliacao)
+        elif opcao == "8":
+            certeza = input("Tem certeza que deseja excluir sua conta? (s/n): ").lower()
+            while certeza != "s" and certeza != "n":
+                certeza = input("Opção inválida. Tente novamente (s/n): ")
+            if certeza == "s":
+                excluir_conta(usuario["id"])
+                print("\nConta excluída... Encerrando sessão.")
+                time.sleep(2)
+                break
+            elif certeza == "n":
+                print("\nExclusão de conta abortada... Voltando ao Menu Logado.")
+                time.sleep(2)
+
+        elif opcao == "9":
             print("Saindo do menu logado...")
+            time.sleep(1.5)
             break
         else:
             print("Opção inválida. Tente novamente.")
+            time.sleep(2)
 
 def menu_principal():
     while True:

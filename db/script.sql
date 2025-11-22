@@ -9,6 +9,7 @@ data_cadastro timestamp default current_timestamp
 create table ponto_turistico (
 id_ponto_turistico SERIAL primary key,
 nome varchar(45) not null,
+nome_exibicao varchar(100),
 descricao text,
 horario_funcionamento varchar(45),
 custo_entrada decimal(10,2),
@@ -44,6 +45,3 @@ id_ponto_turistico int not null,
 foreign key (id_usuario) references usuario(id_usuario),
 foreign key (id_ponto_turistico) references ponto_turistico(id_ponto_turistico)
 );
-
-truncate table usuario, ponto_turistico, categoria, ponto_turistico_categoria, avaliacao cascade; /* caso necessário */
-drop table usuario, ponto_turistico, categoria, ponto_turistico_categoria, avaliacao; /* caso necessário */

@@ -1,9 +1,9 @@
-# db/funcoes.py
 import db.connection
 from functions.limpar import limpar_tela
 import unicodedata
 import time
 from decimal import Decimal, InvalidOperation
+from datetime import datetime
 
 def normalizar(texto):
     if not texto:
@@ -12,7 +12,6 @@ def normalizar(texto):
     texto = unicodedata.normalize("NFD", texto)
     texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
     return texto
-
 
 # Helpers / Validações
 def _format_table(rows, headers):
@@ -67,15 +66,17 @@ def mostrar_pontos_turisticos():
         cur.execute("""
             SELECT id_ponto_turistico, nome_exibicao, cidade, estado, cep
             FROM ponto_turistico
-            ORDER BY nome_exibicao;
+            ORDER BY id_ponto_turistico ASC;
         """)
         rows = cur.fetchall()
 
         if rows:
             headers = ("ID", "Nome", "Cidade", "Estado", "CEP")
             print("\n" + _format_table(rows, headers))
+            input("\nPressione ENTER para voltar ao menu...")
         else:
             print("\nNenhum ponto turístico cadastrado.")
+            time.sleep(2)
 
     finally:
         cur.close()
@@ -84,6 +85,7 @@ def mostrar_pontos_turisticos():
 def mostrar_avaliacoes_usuario(id_usuario):
     conn = db.connection.get_connection()
     cur = conn.cursor()
+
     try:
         cur.execute("""
             SELECT 
@@ -98,8 +100,14 @@ def mostrar_avaliacoes_usuario(id_usuario):
         """, (id_usuario,))
         rows = cur.fetchall()
         if rows:
+            rows_formatado = []
+            for ponto, nota, comentario, data in rows:
+                data_formatada = data.strftime("%d/%m/%Y às %H:%M:%S")
+                rows_formatado.append((ponto, nota, comentario, data_formatada))
+
             headers = ("Ponto", "Nota", "Comentário", "Data")
-            print("\nAvaliações do usuário:\n" + _format_table(rows, headers))
+            print("\nAvaliações do usuário:\n" + _format_table(rows_formatado, headers))
+            input("\nPressione ENTER para voltar ao menu...")
         else:
             print("\nEsse usuário não tem avaliações.")
             time.sleep(2)
@@ -125,8 +133,14 @@ def mostrar_avaliacoes_ponto(nome_ponto):
         """, (nome_normalizado,))
         rows = cur.fetchall()
         if rows:
-            headers = ("Usuário", "Nota", "Comentario", "Data")
-            print(f"\nAvaliações do ponto '{nome_ponto}':\n" + _format_table(rows, headers))
+            rows_formatado = []
+            for usuario, nota, comentario, data in rows:
+                data_formatada = data.strftime("%d/%m/%Y às %H:%M:%S")
+                rows_formatado.append((usuario, nota, comentario, data_formatada))
+
+            headers = ("Usuário", "Nota", "Comentário", "Data")
+            print(f"\nAvaliações do ponto '{nome_ponto}':\n" + _format_table(rows_formatado, headers))
+            input("\nPressione ENTER para voltar ao menu...")
         else:
             print(f"\nNenhuma avaliação encontrada para '{nome_ponto}'.")
             time.sleep(2)
@@ -147,6 +161,11 @@ def cadastrar_ponto_turistico():
     custo_entrada = input("Custo de entrada (ou 0 se gratuito): ")
     logradouro = input("Logradouro: ")
 
+    cep = input("CEP (Apenas números) (*): ")
+    while not cep:
+        print("CEP é obrigatório.")
+        cep = input("CEP: ")
+
     estado = input("Estado (*): ")
     while not estado:
         print("Estado é obrigatório.")
@@ -156,11 +175,6 @@ def cadastrar_ponto_turistico():
     while not cidade:
         print("Cidade é obrigatório.")
         cidade = input("Cidade: ")
-
-    cep = input("CEP (Apenas números) (*): ")
-    while not cep:
-        print("CEP é obrigatório.")
-        cep = input("CEP: ")
 
     def latitude_longitude_opcional(string):
         while True:
@@ -227,8 +241,9 @@ def avaliar_ponto_turistico(id_usuario, nome_ponto, nota, comentario=None):
         print("Nota inválida. Use um número inteiro (0-5).")
         return
 
-    if nota_int < 0 or nota_int > 5:
+    while nota_int < 0 or nota_int > 5:
         print("Nota deve ser entre 0 e 5.")
+        nota_int = int(nota)
         return
 
     # valida usuário
@@ -256,10 +271,95 @@ def avaliar_ponto_turistico(id_usuario, nome_ponto, nota, comentario=None):
 
         inserted = cur.fetchone()[0]
         conn.commit()
-        print(f"Avaliação registrada com ID {inserted}.")
+        print(f"\nAvaliação registrada com ID {inserted}.")
+        time.sleep(1.5)
+        limpar_tela()
     except Exception as e:
         conn.rollback()
         print("Erro ao registrar avaliação:", e)
+    finally:
+        cur.close()
+        conn.close()
+
+def atualizar_nome_usuario(id_usuario, novo_nome):
+    if not novo_nome or len(novo_nome) < 3:
+        print("Nome inválido. Digite pelo menos 3 caracteres.")
+        return
+
+    conn = db.connection.get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE usuario
+            SET nome = %s
+            WHERE id_usuario = %s;
+        """, (novo_nome, id_usuario))
+        
+        conn.commit()
+        print("\nNome atualizado com sucesso!")
+        time.sleep(1.5)
+        limpar_tela()
+
+    except Exception as e:
+        conn.rollback()
+        print("Erro ao atualizar nome:", e)
+    finally:
+        cur.close()
+        conn.close()
+
+def excluir_conta(id_usuario):
+    conn = db.connection.get_connection()
+    cur = conn.cursor()
+    try:
+        # apagar avaliações primeiro (FK)
+        cur.execute("""
+            DELETE FROM avaliacao WHERE id_usuario = %s;
+        """, (id_usuario,))
+
+        # apagar o usuário
+        cur.execute("""
+            DELETE FROM usuario WHERE id_usuario = %s;
+        """, (id_usuario,))
+
+        conn.commit()
+
+    except Exception as e:
+        conn.rollback()
+        print("Erro ao excluir conta:", e)
+    finally:
+        cur.close()
+        conn.close()
+
+def excluir_avaliacao(id_usuario, id_avaliacao):
+    conn = db.connection.get_connection()
+    cur = conn.cursor()
+    try:
+        # verificar se a avaliação é dele
+        cur.execute("""
+            SELECT 1 FROM avaliacao
+            WHERE id_avaliacao = %s AND id_usuario = %s;
+        """, (id_avaliacao, id_usuario))
+
+        if not cur.fetchone():
+            print("\nVocê não pode apagar essa avaliação (não é sua).")
+            time.sleep(2)
+            limpar_tela()
+            return
+
+        # apagar
+        cur.execute("""
+            DELETE FROM avaliacao
+            WHERE id_avaliacao = %s;
+        """, (id_avaliacao,))
+
+        conn.commit()
+        print("\nAvaliação excluída com sucesso!")
+        time.sleep(1.5)
+        limpar_tela()
+
+    except Exception as e:
+        conn.rollback()
+        print("Erro ao excluir avaliação:", e)
     finally:
         cur.close()
         conn.close()
