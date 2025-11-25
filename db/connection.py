@@ -1,8 +1,8 @@
 import psycopg2
 from psycopg2 import sql
 from dotenv import load_dotenv
-from menus.menu import menu_principal
 import os
+import time
 
 load_dotenv()
 
@@ -30,8 +30,10 @@ def criar_banco_se_nao_existir():
         if not existe:
             cur.execute(sql.SQL("CREATE DATABASE {};").format(sql.Identifier(DB_NAME)))
             print(f"Banco de dados '{DB_NAME}' criado com sucesso!")
+            time.sleep(1.5)
         else:
             print(f"O banco de dados '{DB_NAME}' já existe.")
+            time.sleep(1.5)
 
     except psycopg2.Error as e:
         print("Erro ao verificar/criar o banco:", e)
@@ -65,6 +67,7 @@ def testar_conexao():
         if conn:
             print(f"Conexão com o banco '{DB_NAME}' bem-sucedida!")
             conn.close()
+            time.sleep(1.5)
             return True
         else:
             print("Falha na conexão com o banco de dados.")
