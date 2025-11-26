@@ -3,6 +3,7 @@ import bcrypt
 import psycopg2
 import time
 from functions.limpar import limpar_tela
+from getpass import getpass
 
 def cadastro():
     conn = db.connection.get_connection()
@@ -26,11 +27,18 @@ def cadastro():
         print("E-mail inválido. Tente novamente.")
         email = input("Digite seu e-mail novamente: ")
 
-    senha = input("Digite sua senha: ")
+    senha = getpass("Digite sua senha: ")
 
     while len(senha) < 6 or len(senha) > 24:
         print("Senha inválida! A senha deve ter de 6 à 24 caracteres.")
         senha = input("Digite sua senha novamente: ")
+
+    confirmar = getpass("Confirme sua senha: ")
+
+    while confirmar != senha:
+        print("As senhas não coincidem. Tente novamente.")
+        senha = getpass("Digite sua senha novamente: ")
+        confirmar = getpass("Confirme sua senha novamente: ")
 
     senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             

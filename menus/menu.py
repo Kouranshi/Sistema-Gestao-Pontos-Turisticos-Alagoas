@@ -1,6 +1,7 @@
 from functions.cadastro_login import cadastro, login
 from functions.limpar import limpar_tela
 import time
+from getpass import getpass
 from db.funcoes import (
     mostrar_pontos_turisticos,
     mostrar_avaliacoes_usuario,
@@ -31,7 +32,7 @@ def menu_login():
     print("║            🔑 Fazer Login            ║")
     print("╠══════════════════════════════════════╣")
     email = input("Email: ")
-    senha = input("Senha: ")
+    senha = getpass("Senha: ")
     return email, senha
 
 

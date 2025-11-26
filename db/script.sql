@@ -1,3 +1,5 @@
+/* Depois de criar o banco de dados (através da main.py ou pelo PostgreSQL, mesmo), é necessário copiar esse código e criar as tabelas no PostgreSQL. */
+
 create table usuario (
 id_usuario SERIAL primary key,
 nome varchar(255) not null,
