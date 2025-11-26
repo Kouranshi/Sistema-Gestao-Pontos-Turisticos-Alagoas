@@ -4,8 +4,8 @@ Sistema acadêmico de gestão de pontos turísticos em Alagoas, desenvolvido em 
 
 É necessário criar uma .env para haver a conexão com o banco de dados. Nesta .env deve conter as seguintes informações:
 
-DB_HOST = SEU_HOST
+DB_HOST = seu_host
 DB_NAME = sistema_turismo_alagoas
-DB_USER = SEU_USUARIO
-DB_PASSWORD = SUA_SENHA
-DB_PORT = SUA_PORTA
+DB_USER = seu_usuario
+DB_PASSWORD = sua_senha
+DB_PORT = sua_porta
